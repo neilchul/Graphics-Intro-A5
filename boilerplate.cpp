@@ -206,242 +206,79 @@ void RenderScene(Geometry *geometry, GLuint program, vec3 color, Camera* camera,
 }
 
 
-//takes in a sphere and azimuth/altitude interval 
-//outputs an approximated sphere
-layer approximateLayer(sphere &sph, float interval, float phi_IN, float layerIndex){
+sphere generateSphere(float radius, float interval){
 
 
-
-	float phi = phi_IN * (PI_F/180);
-	vec3 c = sph.center;
-	float r = sph.radius * sin(phi);
-
-
-
-	if (phi_IN == 90.f)
-		r = sph.radius;
+   
+    sphere  sph = sphere(vec3(0,0,0), radius);
 
 	
 	//printf("Phi: %f\tsin(90-phi): %f\tr: %f\n", phi_IN, sin((PI_F/2)-phi), r);
 
 	//calculate for y coordinate
 	//float yLayer = phi/interval - (180.f / (2*interval)); 
-	float y = cos(phi) * sph.radius;
-
-//	cout << r << endl;
-	//contains vertices (vec3) of one layer of the approximation 
-	vector <vec3> sphereLayer;
-	layer texLayer;
-
-
-	for ( float theta = 0.f; theta < 360.f; theta+= interval){
-		vec3 vertex = vec3(r*sin(theta*(PI_F/180.f)), y,r*cos(theta*(PI_F/180.f)) ) ;
-		sphereLayer.push_back(vertex+c);
-		texLayer.texCoord.push_back( vec2(radians(theta)/(2*PI_F), phi/PI_F) );
-		/*
-		//determine texCoord
-		if (phi_IN == interval){
-			vec2 tex1 = vec2(radians(theta)/(2*PI_F) , 0.5);
-		}
-		vec2 tex1 = vec2(radians(theta)/(2*PI_F) , phi/PI_F);
-		vec2 tex2 = vec2(radians(theta+interval)/(2*PI_F) , phi/PI_F);
-		vec2 tex3 = vec2(radians(theta+interval)/(2*PI_F) , (phi+interval)/PI_F);
-		sph.texCoord.push_back(tex1);
-		sph.texCoord.push_back(tex2);
-		sph.texCoord.push_back(tex3);
-
-		tex2 = vec2(radians(theta)/(2*PI_F) , (phi+interval)/PI_F);
-		sph.texCoord.push_back(tex1);
-		sph.texCoord.push_back(tex2);
-		sph.texCoord.push_back(tex3);
-		*/
-
-		printf("x: %f\ty  %f\n", radians(theta)/(2*PI_F), phi/PI_F);
-	} 
-
-
-	cout <<endl;
-	sph.texLayers.push_back(texLayer);	
-	return layer(sphereLayer);
-	
-}
-
-sphere approximateSphere(vec3 center, float radius, float interval){
-
-	//sphere sph = sphere(center, radius);
-	//vector<layer> layers;
-	sphere sph = sphere(center, radius);
-	float layerIndex = (int)(90.f/interval) - 1;
 	
 
-	for(float phi = interval; phi <= (180.f-interval); phi += interval ){
+
+    vec3 vert1, vert2, vert3;
+    vec2 tex1, tex2, tex3; 
+
+
+
+    for(float phi = 0.f; phi <= (180.f-interval); phi += interval ){
 		
-		layer l = approximateLayer(sph, interval, phi, layerIndex);
-		layerIndex--;
-		sph.layers.push_back(l);
+        float r = radius * sin(radians(phi));
+        float rDown = radius * sin(radians(phi+interval));
+
+
+        if (phi == 90.f)
+            r = radius;
+        else if (phi+interval == 90.f)
+            rDown = radius; 
+
+        float y = cos(radians(phi)) * radius;
+        float yDown = cos(radians(phi+interval)) * radius;
+		
+		for ( float theta = 0.f; theta < 360.f; theta+= interval){
+		
+        vert1 = vec3(r*sin(radians(theta)), y,r*cos(radians(theta)) ) ;
+        vert2 = vec3(r*sin(radians(theta+interval)), y,r*cos(radians(theta+interval)) ) ;
+        vert3 = vec3(rDown*sin(radians(theta+interval)), yDown ,rDown*cos(radians(theta+interval)) ) ;
+        sph.mesh.push_back(vert1);
+        sph.mesh.push_back(vert2);
+        sph.mesh.push_back(vert3);
+
+        vert2 =  vec3(rDown*sin(radians(theta)), yDown,rDown*cos(radians(theta)) );
+        sph.mesh.push_back(vert1);
+        sph.mesh.push_back(vert2);
+        sph.mesh.push_back(vert3);
+
+
+        tex1 = vec2 (radians(theta)/(2*PI_F), radians(phi)/PI_F);
+        tex2 = vec2 (radians(theta+interval)/(2*PI_F), radians(phi)/PI_F);
+        tex3 = vec2 (radians(theta+interval)/(2*PI_F), radians(phi+interval)/PI_F);
+        sph.texCoord.push_back(tex1);
+        sph.texCoord.push_back(tex2);
+        sph.texCoord.push_back(tex3);
+
+        tex2 = vec2 (radians(theta)/(2*PI_F), radians(phi+interval)/PI_F);
+        sph.texCoord.push_back(tex1);
+        sph.texCoord.push_back(tex2);
+        sph.texCoord.push_back(tex3);
+
+
+
+	    } 
+		
 
 		
 			
 
 	}
-	
-	//sph = sphere(center, radius, layers);
-	return sph;
 
+   
+    return sph; 
 }
-
-//not so testcode------------------------------------------------------------------
-//load all the vertices of a sphere into a vector to render onto the screen
-vector<vec3> loadSpherePOINTS(sphere sph){
-
-	vector<vec3> vertices;
-	for(layer l:sph.layers){
-		for (vec3 v: l.vertices){
-			vertices.push_back(v);
-		}
-	}
-
-	return vertices;
-}
-
-
-
-
-
-//have top cap, work on the rest ,
-layer loadSphereTRI(sphere &sph){
-
-	//vector<vec2> texCoord = sph.texCoord;
-	vec2 poleTex = vec2(0.f, 1.f);
-	vec2 poleSouthTex = vec2(0.f, 0.f);
-
-	vector<vec3> vertices;
-	vector<vec2> texCoord;
-
-	for(int indexL = 0; indexL <  sph.layers.size(); indexL++){
-		layer l = sph.layers[indexL];
-		layer texL = sph.texLayers[indexL];
-
-		for (int indexV = 0; indexV < l.vertices.size(); indexV++){
-			if (indexL == 0){
-				vertices.push_back(sph.pole);
-				vertices.push_back(l.vertices[indexV]);
-
-				//tex
-				texCoord.push_back(poleTex);
-				texCoord.push_back(texL.texCoord[indexV]);
-
-				if (indexV < l.vertices.size()-1){
-					vertices.push_back(l.vertices[indexV+1]);
-					texCoord.push_back(texL.texCoord[indexV+1]);
-				}
-					
-				else{
-					vertices.push_back(l.vertices[0]);
-					texCoord.push_back(texL.texCoord[0]);
-				}
-					
-					
-			}
-			//else (the  rest of the body read normally)
-			//---- up across -> across up
-			else{
-				
-				layer upLayer = sph.layers[indexL-1];
-				layer upTexLayer = sph.texLayers[indexL-1];
-				//vec3 upVertex = upLayer.vertices[indexV];
-
-				//up across
-				vertices.push_back(l.vertices[indexV]);
-				vertices.push_back(upLayer.vertices[indexV]);
-
-				//tex
-				texCoord.push_back(texL.texCoord[indexV]);
-				texCoord.push_back(upTexLayer.texCoord[indexV]);
-
-				if (indexV < l.vertices.size()-1){
-					vertices.push_back(upLayer.vertices[indexV+1]);
-					texCoord.push_back(upTexLayer.texCoord[indexV+1]);
-				}
-					
-				else {
-					vertices.push_back(upLayer.vertices[0]);
-					texCoord.push_back(upTexLayer.texCoord[0]);
-				}
-
-
-			
-				//across up
-				vertices.push_back(l.vertices[indexV]);
-				texCoord.push_back(texL.texCoord[indexV]);
-
-				if (indexV < l.vertices.size()-1){
-					vertices.push_back(l.vertices[indexV+1]);
-					vertices.push_back(upLayer.vertices[indexV+1]);
-
-					texCoord.push_back(texL.texCoord[indexV+1]);
-					texCoord.push_back(upTexLayer.texCoord[indexV+1]);
-				}
-				
-				else{
-					vertices.push_back(l.vertices[0]);
-					vertices.push_back(upLayer.vertices[0]);
-
-					texCoord.push_back(texL.texCoord[0]);
-					texCoord.push_back(upTexLayer.texCoord[0]);
-				}	
-				
-				
-
-			}
-		}
-
-	
-	}
-
-	//-----handle bottom cap here 
-	vector<vec3>  lastLayer  = sph.layers[sph.layers.size()-1].vertices;
-	vector<vec2>  lastTexLayer = sph.texLayers[sph.texLayers.size()-1].texCoord;
-	for (int i = 0; i<lastLayer.size(); i++){
-		vertices.push_back(sph.poleSouth);
-		vertices.push_back(lastLayer[i]);
-
-		//tex
-		texCoord.push_back(poleSouthTex);
-		texCoord.push_back(lastTexLayer[i]);
-
-		
-		if (i < lastLayer.size()-1){
-			vertices.push_back(lastLayer[i+1]);
-			texCoord.push_back(lastTexLayer[i+1]);
-		}	
-		else {
-			vertices.push_back(lastLayer[0]);
-			texCoord.push_back(lastTexLayer[0]);
-		}		
-	} 
-
-	layer RESULT = layer(vertices);
-	RESULT.texCoord = texCoord;
-	return RESULT;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -541,27 +378,13 @@ int main(int argc, char *argv[])
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 
-	// three vertex positions and assocated colours of a triangle
-	/*
-	vec3 vertices[] = {
-		vec3( -.6f, -.4f, -0.5f ),
-		vec3( .0f,  .6f, -0.5f ),
-		vec3( .6f, -.4f,-0.5f )
-	};
-	*/
 
+    //---------- GEOMETRY STUFF ---------------------------------------
 
-	//vector<layer> layers;
-	//sphere sph = sphere(center, radius, layers);
-	sphere sph = approximateSphere(vec3(0,0,0), 1.f, 10.f );
-
-
-
-	vector<vec3> vertices = loadSphereTRI(sph).vertices;
-	//vertices.push_back(sph.pole);
-	//vec3 test = -1.f*sph.pole;
-	//vertices.push_back(test);
-
+    //generate a sphere and assign its mesh and texcoord accordingly 
+    sphere sph = generateSphere(1.f, 10.f);
+    vector<vec3> vertices = sph.mesh;
+	vector<vec2> texCoord = sph.texCoord;
 
 	vec3 frustumVertices[] = {
 		vec3(-1, -1, -1),
@@ -589,40 +412,8 @@ int main(int argc, char *argv[])
 		frustumVertices[i] = vec3(newPoint)/newPoint.w;
 	}
 
-	//-----------------TEXTURE STUFF------------------------
-		MyTexture earthTex;
-
-		char filePaths[3][50] ={
-			"./textures/2k_earth_daymap.jpg",
-			"./textures/2k_moon.jpg",
-			"./textures/sun.jpg"
-		} ;
-		if(InitializeTexture(&earthTex, filePaths[0], GL_TEXTURE_2D)){
-			cout<<"hi"<<endl;
-		}
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, earthTex.textureID);
-		GLint sample = glGetUniformLocation(program, "s");
-		glUseProgram(program);
-		glUniform1i(sample, 0);
-		glUseProgram(0);
-
-	//======================================================
 
 	Geometry geometry;
-	Geometry frustumGeometry;
-
-	//DONT FORGET THIS
-	vector<vec2> texCoord = loadSphereTRI(sph).texCoord;
-
-	//cout << vertices.size() <<endl;
-	//cout << texCoord.size() <<endl;
-
-	
-	for (int i = 0; i<vertices.size(); i++){
-		//printf("x: %f\ty: %f\n", texCoord[i].x, texCoord[i].y);
-	}
-
 
 	// call function to create and fill buffers with geometry data
 	if (!InitializeVAO(&geometry))
@@ -631,11 +422,32 @@ int main(int argc, char *argv[])
 	if(!LoadGeometry(&geometry, &vertices[0], &texCoord[0], vertices.size()))
 		cout << "Failed to load geometry" << endl;
 
-	//if (!InitializeVAO(&frustumGeometry))
-	//	cout << "Program failed to intialize geometry!" << endl;
 
-	//if(!LoadGeometry(&frustumGeometry, frustumVertices, 16))
-	//	cout << "Failed to load geometry" << endl;
+	//-----------------TEXTURE STUFF------------------------
+		
+
+		char filePaths[3][50] ={
+			"./textures/2k_earth_daymap.jpg",
+			"./textures/2k_moon.jpg",
+			"./textures/2k_sun.jpg"
+		} ;
+
+        MyTexture earthTex;
+		InitializeTexture(&earthTex, filePaths[0], GL_TEXTURE_2D);
+
+        MyTexture moonTex;
+		InitializeTexture(&moonTex, filePaths[1], GL_TEXTURE_2D);
+
+        MyTexture sunTex;
+		InitializeTexture(&sunTex, filePaths[2], GL_TEXTURE_2D);
+
+		
+
+
+	//======================================================
+
+    //------------CAMER STUFF-------------------------------
+
 
 	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
@@ -657,16 +469,17 @@ int main(int argc, char *argv[])
 	
 	cam.initializeCamera(0.f,90.f, -190.f);
 	cam.pof = vec3(0,0,0);
-	//cam.move(vec3(0.000001f, 0.0000001f,0));
 
-	//---------------TEST CODE---------------
+    //======================================================
+
+	//---------------ANIMATION SETUP---------------------------
 	
 	float logDistance = 1.2f;
 	float logSize = 2.f;
 
 	
 
-	//sun setup and tranformation
+	//sun setup
 	float sunSize = intlog(logSize, 695508.f);
 
 
@@ -685,25 +498,6 @@ int main(int argc, char *argv[])
 	float moonSize = intlog(logSize, 1737.f);
 
 
-//	printf("S: %f \tE: %f\tM: %f\n", sunSize, eSize, moonSize);
-//	printf("\teDist: %f\tmDis: %f\n", eDistance, moonDistance);
-
-	//mat4 rotationMatrix = rotate(30.f, rotationAxis);
-
-	glm::mat4 transformation = glm::mat4(1.0f);
-
-	
-	
-	//vec3 rotationAxis = vec3(0,1,0);
-	
-
-	//glm::mat4 myScalingMatrix = glm::scale(0.5f, 0.5f, 0.5f);
-
-	//Bind uniforms
-	//GLint uniformLocation = glGetUniformLocation(program, "translation");
-	//glUniformMatrix4fv(uniformLocation, 1, false, glm::value_ptr(translationMatrix));
-
-	
 
 	//=======================================
 
@@ -724,9 +518,6 @@ int main(int argc, char *argv[])
 			movement.z += 1.f;
 		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 			movement.z -= 1.f;
-
-		
-		//cam.move(movement*movementSpeed);
 			
 	
 
@@ -787,8 +578,28 @@ int main(int argc, char *argv[])
 
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		// call function to draw our scene
+        glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, sunTex.textureID);
+		GLint sample = glGetUniformLocation(program, "s");
+		glUseProgram(program);
+		glUniform1i(sample, 0);
+		glUseProgram(0);
 		RenderScene(&geometry, program, vec3(1, 0, 0), &cam, perspectiveMatrix, transformSun, GL_TRIANGLES);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, earthTex.textureID);
+		sample = glGetUniformLocation(program, "s");
+		glUseProgram(program);
+		glUniform1i(sample, 0);
+		glUseProgram(0);
 		RenderScene(&geometry, program, vec3(0, 0, 1), &cam, perspectiveMatrix, transformEarth, GL_TRIANGLES);
+
+     	glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, moonTex.textureID);
+		sample = glGetUniformLocation(program, "s");
+		glUseProgram(program);
+		glUniform1i(sample, 0);
+		glUseProgram(0);
 		RenderScene(&geometry, program, vec3(1, 1, 1), &cam, perspectiveMatrix, transformMoon, GL_TRIANGLES);
 		//RenderScene(&frustumGeometry, program, vec3(0, 0, 1), &cam, perspectiveMatrix, glm::mat4(1.0f), GL_LINE_STRIP);
 
